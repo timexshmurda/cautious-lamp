@@ -1,75 +1,67 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { mockRecipes } from "../lib/recipes";
+import { useState } from "react";
 
 export default function Home() {
   const [query, setQuery] = useState("");
-  const [selectedCuisine, setSelectedCuisine] = useState("");
-  const [recipes, setRecipes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [recipe, setRecipe] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const cuisines = Array.from(new Set(mockRecipes.map(r => r.cuisine)));
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+    setLoading(true);
+    setRecipe(null);
+    setError(null);
 
-  useEffect(() => {
-    let filteredRecipes = mockRecipes;
+    try {
+      const res = await fetch("/api/recipe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
 
-    if (selectedCuisine) {
-      filteredRecipes = filteredRecipes.filter(
-        (recipe) => recipe.cuisine === selectedCuisine
-      );
+      if (!res.ok) throw new Error("Failed to fetch recipe");
+
+      const data = await res.json();
+      setRecipe(data.result); // `result` matches backend response key
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err));
+      }
+    } finally {
+      setLoading(false);
     }
-
-    if (query) {
-        filteredRecipes = filteredRecipes.filter(recipe => recipe.title.toLowerCase().includes(query.toLowerCase()));
-    }
-
-    setRecipes(filteredRecipes);
-  }, [query, selectedCuisine]);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center p-12">
-      <h1 className="text-5xl font-bold text-center">Recipe Finder</h1>
-      <p className="text-lg mt-2 text-gray-600 dark:text-gray-400">Your AI-powered recipe assistant</p>
-
-      <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 w-full max-w-2xl">
-        <form onSubmit={handleSearch} className="flex-grow">
-          <input
-            type="text"
-            placeholder="Search for any recipe..."
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 p-4 text-black dark:text-white bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 outline-none"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </form>
-        <div className="w-full sm:w-auto">
-            <select
-                value={selectedCuisine}
-                onChange={(e) => setSelectedCuisine(e.target.value)}
-                className="p-4 border rounded-lg text-black dark:text-white bg-white dark:bg-gray-800 dark:border-gray-600 w-full focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-                <option value="">All Cuisines</option>
-                {cuisines.map(cuisine => (
-                    <option key={cuisine} value={cuisine}>{cuisine}</option>
-                ))}
-            </select>
+    <main className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-6">
+      <h1 className="text-4xl font-bold mb-6">AI Recipe Finder</h1>
+      <div className="flex w-full max-w-lg gap-2">
+        <input
+          className="flex-1 p-3 rounded-xl text-black"
+          placeholder="Search for any recipe..."
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+        />
+        <button
+          className="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-xl"
+          onClick={handleSearch}
+          disabled={loading}
+        >
+          {loading ? "Loading..." : "Search"}
+        </button>
+      </div>
+      {error && <p className="text-red-400 mt-4">{error}</p>}
+      {recipe && (
+        <div className="mt-6 max-w-2xl text-left whitespace-pre-wrap">
+          {recipe}
         </div>
-      </div>
-
-      <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 w-full max-w-6xl">
-        {recipes.map((recipe) => (
-          <Link href={`/recipe/${recipe.id}`} key={recipe.id}>
-            <div className="rounded-lg border p-6 h-full cursor-pointer bg-white dark:bg-gray-800 dark:border-gray-700 shadow-sm hover:shadow-lg hover:scale-105 transition-all duration-200">
-              <h2 className="text-xl font-semibold">{recipe.title}</h2>
-              <p className="mt-2 text-sm text-blue-500 dark:text-blue-400">{recipe.cuisine}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
+      )}
     </main>
   );
 }
+
