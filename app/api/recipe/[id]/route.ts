@@ -1,25 +1,29 @@
 import { NextResponse } from "next/server";
 
-interface Recipe {
-  id: string;
-  [key: string]: unknown;
-}
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  // Extract 'id' from pathname or search params depending on your route
+  // For dynamic route [id], you can parse pathname:
 
-// Temporary in-memory recipe storage (replace with your DB later)
-const recipeCache: Record<string, Recipe> = {};
+  const pathname = url.pathname; // e.g. /api/recipe/123
+  const segments = pathname.split("/");
+  const id = segments[segments.length - 1]; // last segment is the id
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
-  const { id } = params;
-
+  // Now use id to get recipe from cache
   if (recipeCache[id]) {
     return NextResponse.json(recipeCache[id]);
   }
 
   return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
 }
+
+// Your recipeCache and POST stay as before:
+interface Recipe {
+  id: string;
+  [key: string]: unknown;
+}
+
+const recipeCache: Record<string, Recipe> = {};
 
 export async function POST(request: Request) {
   const data: Recipe = await request.json();
