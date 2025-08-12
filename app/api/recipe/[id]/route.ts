@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 
+interface Recipe {
+  id: string;
+  [key: string]: unknown;
+}
+
 // Temporary in-memory recipe storage (replace with your DB later)
-const recipeCache: Record<string, any> = {};
+const recipeCache: Record<string, Recipe> = {};
 
 export async function GET(
   request: Request,
@@ -17,7 +22,7 @@ export async function GET(
 }
 
 export async function POST(request: Request) {
-  const data = await request.json();
+  const data: Recipe = await request.json();
 
   if (!data.id) {
     return NextResponse.json({ error: "Missing recipe ID" }, { status: 400 });
